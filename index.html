@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description" content="دردشة ونقل ملفات محلياً بين جهازين باستخدام WebRTC و QR بدون خادم وسيط بعد تحميل الصفحة." />
+  <title>AMARIZE LocalChat&FileTransfer</title>
+
+  <style>
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f7f8fa;
+  --panel: rgba(255, 255, 255, 0.95);
+  --panel-2: #ffffff;
+  --line: #e8e8e8;
+  --text: #1a1a1a;
+  --muted: #667781;
+  --primary: #25d366;
+  --primary-2: #128c7e;
+  --green: #25d366;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --cyan: #34b7f1;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --radius: 16px;
+  --radius-sm: 12px;
+}
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    .app {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .glass {
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--line);
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 16px;
+      align-items: center;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 16px;
+      color: white;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .title p {
+      margin: 2px 0 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .badges {
+      display: none;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 20px;
+      background: #f0f2f5;
+      border: 1px solid var(--line);
+      font-size: 0.7rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .badge.ok {
+      background: #e7fbe6;
+      border-color: #b7eb8f;
+      color: #237804;
+    }
+
+    .badge.warn {
+      background: #fff7e6;
+      border-color: #ffd591;
+      color: #ad6800;
+    }
+
+    .badge.err {
+      background: #fff1f0;
+      border-color: #ffa39e;
+      color: #cf1322;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      padding: 4px;
+      margin: 8px 12px;
+      border-radius: 12px;
+      background: #f5f5f5;
+      border: none;
+      position: sticky;
+      top: 64px;
+      z-index: 9;
+    }
+
+    .tab-btn {
+      flex: 1;
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+    .tab-panel {
+      display: none;
+      flex: 1;
+      padding: 0 12px 12px;
+      overflow-y: auto;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .grid-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .grid-settings {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .two-cols {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 8px;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .subtle {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.88rem;
+    }
+
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .status-pill {
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #f5f5f5;
+      border: 1px solid var(--line);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .status-pill.success {
+      background: #f6ffed;
+      border-color: #b7eb8f;
+      color: #237804;
+    }
+
+    .status-pill.warning {
+      background: #fffbe6;
+      border-color: #ffe58f;
+      color: #ad6800;
+    }
+
+    .status-pill.error {
+      background: #fff2f0;
+      border-color: #ffccc7;
+      color: #cf1322;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.88rem;
+      background: #f0f2f5;
+      color: var(--text);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn.primary {
+      background: #25d366;
+      color: white;
+      border-color: #25d366;
+    }
+
+    .btn.secondary {
+      background: #ffffff;
+      border-color: var(--line);
+    }
+
+    .btn.success {
+      background: #25d366;
+      color: white;
+    }
+
+    .btn.warning {
+      background: #faad14;
+      color: white;
+    }
+
+    .btn.danger {
+      background: #ff4d4f;
+      color: white;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: #f5f5f5;
+      color: var(--text);
+      padding: 12px 16px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+    }
+
+    .messages {
+      min-height: 300px;
+      max-height: 50vh;
+      max-height: 50dvh;
+      overflow-y: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #efeae2;
+      background-image: 
+        radial-gradient(circle at 20% 30%, rgba(0,0,0,0.015) 1px, transparent 1px),
+        radial-gradient(circle at 80% 70%, rgba(0,0,0,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 8px 14px;
+      border-radius: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.9rem;
+      position: relative;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .msg.out {
+      align-self: flex-end;
+      background: var(--msg-out);
+      border: 1px solid #c8e6c9;
+      border-radius: 12px 12px 4px 12px;
+    }
+
+    .msg.in {
+      align-self: flex-start;
+      background: var(--msg-in);
+      border: 1px solid var(--line);
+      border-radius: 12px 12px 12px 4px;
+    }
+
+    .msg.system {
+      align-self: center;
+      max-width: 90%;
+      background: #fff9e6;
+      border: 1px solid #ffe58f;
+      color: #5c4a00;
+      font-size: 0.82rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .composer {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    .composer input {
+      flex: 1;
+    }
+
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .progress-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    progress {
+      width: 100%;
+      height: 8px;
+      border: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #e8e8e8;
+    }
+
+    progress::-webkit-progress-bar {
+      background: #e8e8e8;
+    }
+
+    progress::-webkit-progress-value {
+      background: linear-gradient(90deg, #25d366, #128c7e);
+      border-radius: 10px;
+    }
+
+    progress::-moz-progress-bar {
+      background: linear-gradient(90deg, #25d366, #128c7e);
+    }
+
+    .note {
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      color: #5c4a00;
+      line-height: 1.7;
+      font-size: 0.85rem;
+    }
+
+    .qr-stage {
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      border: 1px dashed #d9d9d9;
+      background: #fafafa;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    #qrcode canvas,
+    #qrcode img {
+      max-width: 100%;
+      height: auto !important;
+      background: white;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #e8e8e8;
+    }
+
+    #qr-reader {
+      width: 100%;
+      min-height: 250px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #fafafa;
+    }
+
+    .meta-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fafafa;
+      border: 1px solid #f0f0f0;
+      font-size: 0.88rem;
+    }
+
+    .meta-item > div {
+      min-width: 120px;
+    }
+
+    .history,
+    .download-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-item,
+    .download-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #f0f0f0;
+      background: #fafafa;
+      line-height: 1.7;
+      font-size: 0.85rem;
+    }
+
+    .download-item {
+      background: #f6ffed;
+      border-color: #b7eb8f;
+      color: #237804;
+    }
+
+    .fine {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.7;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+
+    @media (min-width: 600px) {
+      .app {
+        border-left: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+      }
+
+      .two-cols {
+        flex-direction: row;
+      }
+
+      .two-cols > * {
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .title h1 {
+        font-size: 0.85rem;
+      }
+
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+      }
+
+      .composer {
+        gap: 6px;
+      }
+    }
+
+    /* تخصيص شريط التمرير */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d9d9d9;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #bfbfbf;
+    }
+  </style>
+
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="logo">A</div>
+        <div class="title">
+          <h1>AMARIZE</h1>
+          <p>LocalChat & FileTransfer</p>
+        </div>
+      </div>
+      <div class="badges">
+        <div id="badge-online" class="badge">فحص الشبكة...</div>
+        <div id="badge-sw" class="badge warn">SW: غير مفعل</div>
+        <div id="badge-mode" class="badge">الوضع: غير محدد</div>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="chat">💬 الدردشة</button>
+      <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
+    </nav>
+
+    <section id="tab-chat" class="tab-panel active">
+      <div class="grid grid-chat">
+        <div class="card">
+          <div class="status-line">
+            <h2>📝 المحادثة</h2>
+            <div id="connection-pill" class="status-pill warning">غير متصل</div>
+          </div>
+
+          <div id="messages" class="messages" aria-live="polite"></div>
+
+          <div class="composer">
+            <input id="chat-input" type="text" placeholder="اكتب رسالة..." />
+            <button id="send-chat-btn" class="btn primary" disabled>📤</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="status-line">
+            <h2>📎 نقل الملفات</h2>
+            <div class="subtle">تقسيم 16KB مع شريط تقدم</div>
+          </div>
+
+          <input id="file-input" type="file" style="margin-bottom: 8px;" />
+          <div class="row" style="margin-bottom: 8px;">
+            <button id="send-file-btn" class="btn success" disabled>📤 إرسال الملف</button>
+            <span id="selected-file-label" class="subtle">لم يتم اختيار ملف</span>
+          </div>
+
+          <div class="progress-wrap">
+            <div id="send-progress-label" class="progress-label">الإرسال: 0%</div>
+            <progress id="send-progress" value="0" max="100"></progress>
+          </div>
+
+          <div class="progress-wrap">
+            <div id="recv-progress-label" class="progress-label">الاستقبال: 0%</div>
+            <progress id="recv-progress" value="0" max="100"></progress>
+          </div>
+
+          <div id="received-files" class="download-list"></div>
+
+          <div class="fine" style="font-size: 10px; margin-top: 8px;">
+            يتم استخدام backpressure على قناة البيانات عبر bufferedAmount لمنع تراكم البيانات في الذاكرة أثناء إرسال الملفات الكبيرة.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-panel">
+      <div class="grid grid-settings">
+        <div class="card">
+          <div class="status-line">
+            <h2>🔗 إدارة الاتصال</h2>
+            <div class="subtle">تبادل Offer / Answer / ICE عبر QR</div>
+          </div>
+
+          <div class="row" style="margin-bottom: 10px;">
+            <button id="create-room-btn" class="btn primary">إنشاء غرفة</button>
+            <button id="join-room-btn" class="btn secondary">انضمام</button>
+            <button id="reset-connection-btn" class="btn ghost">إعادة ضبط</button>
+          </div>
+
+          <div id="mode-note" class="note">
+            على الجهاز الأول اضغط <strong>إنشاء غرفة</strong>. على الجهاز الثاني اضغط <strong>انضمام</strong> ثم امسح QR الظاهر في الجهاز الأول. بعد ذلك سيظهر Answer QR في الجهاز الثاني ليتم مسحه في الجهاز الأول.
+          </div>
+
+          <div class="two-cols" style="margin-top: 12px;">
+            <div class="card" style="padding: 12px;">
+              <h3>📱 QR الصادر</h3>
+              <div id="qr-meta" class="subtle">لا توجد بيانات QR حالياً.</div>
+              <div id="qrcode" class="qr-stage"></div>
+              <div class="row" style="margin-top: 8px;">
+                <button id="qr-prev-btn" class="btn ghost" disabled>◀</button>
+                <button id="qr-next-btn" class="btn ghost" disabled>▶</button>
+                <button id="copy-frame-btn" class="btn ghost" disabled>📋 نسخ</button>
+              </div>
+            </div>
+
+            <div class="card" style="padding: 12px;">
+              <h3>📷 QR الوارد</h3>
+              <div id="scan-status" class="subtle">لم يبدأ المسح بعد.</div>
+              <div id="qr-reader"></div>
+              <div class="row" style="margin-top: 8px;">
+                <button id="start-scan-btn" class="btn success">▶ بدء المسح</button>
+                <button id="stop-scan-btn" class="btn warning" disabled>⏹ إيقاف</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <h3>📋 استيراد يدوي</h3>
+            <textarea id="manual-signal-input" placeholder="الصق إطار QR واحد أو الحزمة كاملة إذا أردت النقل اليدوي..."></textarea>
+            <div class="row" style="margin-top: 8px;">
+              <button id="import-signal-btn" class="btn secondary">استيراد</button>
+              <button id="clear-manual-btn" class="btn ghost">مسح الحقل</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>⚙️ خيارات التطبيق</h2>
+
+          <div class="meta-list" style="margin-top: 10px;">
+            <div class="meta-item">
+              <span>حجم بيانات كل إطار QR</span>
+              <div style="width: 130px;"><input id="qr-frame-size" type="number" min="250" max="1200" step="50" value="700" /></div>
+            </div>
+            <div class="meta-item">
+              <span>الكاميرا المفضلة</span>
+              <div style="width: 130px;">
+                <select id="camera-facing">
+                  <option value="environment">خلفية</option>
+                  <option value="user">أمامية</option>
+                </select>
+              </div>
+            </div>
+            <div class="meta-item">
+              <span>الاحتفاظ بـ host ICE فقط</span>
+              <div><input id="host-only-candidates" type="checkbox" checked /></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <h3>📶 العمل أوفلاين</h3>
+            <div id="offline-status" class="subtle">
+              سيحاول التطبيق تسجيل sw.js وتخزين الصفحة والمكتبات الخارجية داخل Cache للعمل بدون إنترنت بعد أول زيارة ناجحة.
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <h3>🗑 حذف بيانات التطبيق</h3>
+            <div class="subtle">يحذف السجل والإعدادات والـ caches ويحاول إلغاء تسجيل Service Worker.</div>
+            <div class="row" style="margin-top: 8px;">
+              <button id="clear-app-data-btn" class="btn danger">حذف بيانات التطبيق</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <h3>📜 سجل الاتصال</h3>
+            <div id="history" class="history"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
+
+  <script>
+  (() => {
+    'use strict';
+
+    /**********************************************************************
+     * ثابتات التطبيق
+     **********************************************************************/
+    const APP_PREFIX = 'lanlink:';
+    const CHUNK_SIZE = 16 * 1024;             // 16KB
+    const HIGH_WATER_MARK = 256 * 1024;       // إذا تجاوز الـ buffer هذا الحد ننتظر
+    const LOW_WATER_MARK = 64 * 1024;         // وعندما يهبط لهذا الحد نكمل الإرسال
+    const SIGNAL_VERSION = 1;
+
+    const state = {
+      mode: null,                 // offerer | answerer | null
+      pc: null,
+      dc: null,
+      scanner: null,
+      localCandidates: [],
+      outgoingFrames: [],
+      outgoingPacketType: null,
+      currentFrameIndex: 0,
+      incomingFrames: new Map(),
+      isSendingFile: false,
+      receiveFile: null,
+      history: [],
+      scanDebounce: { text: '', ts: 0 }
+    };
+
+    const el = {
+      tabs: Array.from(document.querySelectorAll('.tab-btn')),
+      panels: {
+        chat: document.getElementById('tab-chat'),
+        settings: document.getElementById('tab-settings')
+      },
+      badgeOnline: document.getElementById('badge-online'),
+      badgeSw: document.getElementById('badge-sw'),
+      badgeMode: document.getElementById('badge-mode'),
+      connectionPill: document.getElementById('connection-pill'),
+      messages: document.getElementById('messages'),
+      chatInput: document.getElementById('chat-input'),
+      sendChatBtn: document.getElementById('send-chat-btn'),
+      fileInput: document.getElementById('file-input'),
+      sendFileBtn: document.getElementById('send-file-btn'),
+      selectedFileLabel: document.getElementById('selected-file-label'),
+      sendProgress: document.getElementById('send-progress'),
+      recvProgress: document.getElementById('recv-progress'),
+      sendProgressLabel: document.getElementById('send-progress-label'),
+      recvProgressLabel: document.getElementById('recv-progress-label'),
+      receivedFiles: document.getElementById('received-files'),
+      createRoomBtn: document.getElementById('create-room-btn'),
+      joinRoomBtn: document.getElementById('join-room-btn'),
+      resetConnectionBtn: document.getElementById('reset-connection-btn'),
+      modeNote: document.getElementById('mode-note'),
+      qrMeta: document.getElementById('qr-meta'),
+      qrcode: document.getElementById('qrcode'),
+      qrPrevBtn: document.getElementById('qr-prev-btn'),
+      qrNextBtn: document.getElementById('qr-next-btn'),
+      copyFrameBtn: document.getElementById('copy-frame-btn'),
+      scanStatus: document.getElementById('scan-status'),
+      startScanBtn: document.getElementById('start-scan-btn'),
+      stopScanBtn: document.getElementById('stop-scan-btn'),
+      manualSignalInput: document.getElementById('manual-signal-input'),
+      importSignalBtn: document.getElementById('import-signal-btn'),
+      clearManualBtn: document.getElementById('clear-manual-btn'),
+      qrFrameSize: document.getElementById('qr-frame-size'),
+      cameraFacing: document.getElementById('camera-facing'),
+      hostOnlyCandidates: document.getElementById('host-only-candidates'),
+      offlineStatus: document.getElementById('offline-status'),
+      clearAppDataBtn: document.getElementById('clear-app-data-btn'),
+      history: document.getElementById('history')
+    };
+
+    /**********************************************************************
+     * أدوات مساعدة عامة
+     **********************************************************************/
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const bytesToHuman = (bytes = 0) => {
+      if (bytes < 1024) return `${bytes} بايت`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    };
+
+    const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m]));
+
+    const uid = (prefix = 'id') => `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+
+    function saveJSON(key, value) {
+      localStorage.setItem(APP_PREFIX + key, JSON.stringify(value));
+    }
+
+    function loadJSON(key, fallback) {
+      try {
+        const raw = localStorage.getItem(APP_PREFIX + key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function setOnlineBadge() {
+      const online = navigator.onLine;
+      el.badgeOnline.textContent = online ? 'المتصفح: متصل' : 'المتصفح: أوفلاين';
+      el.badgeOnline.className = `badge ${online ? 'ok' : 'warn'}`;
+    }
+
+    function setModeBadge() {
+      const label = state.mode === 'offerer' ? 'منشئ الغرفة' : state.mode === 'answerer' ? 'منضم' : 'غير محدد';
+      el.badgeMode.textContent = `الوضع: ${label}`;
+    }
+
+    function setConnectionPill(text, kind = 'warning') {
+      el.connectionPill.textContent = text;
+      el.connectionPill.className = `status-pill ${kind}`;
+    }
+
+    function addMessage(type, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${type}`;
+      div.innerHTML = escapeHtml(text);
+      el.messages.appendChild(div);
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+
+    function addSystemMessage(text) {
+      addMessage('system', text);
+    }
+
+    function logHistory(text) {
+      state.history.unshift({ id: uid('log'), ts: Date.now(), text });
+      state.history = state.history.slice(0, 120);
+      saveJSON('history', state.history);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      el.history.innerHTML = '';
+      if (!state.history.length) {
+        el.history.innerHTML = '<div class="history-item">لا يوجد سجل بعد.</div>';
+        return;
+      }
+      for (const item of state.history) {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<strong>${escapeHtml(new Date(item.ts).toLocaleString('ar'))}</strong><br>${escapeHtml(item.text)}`;
+        el.history.appendChild(div);
+      }
+    }
+
+    function persistSettings() {
+      saveJSON('settings', {
+        qrFrameSize: Number(el.qrFrameSize.value) || 700,
+        cameraFacing: el.cameraFacing.value,
+        hostOnlyCandidates: !!el.hostOnlyCandidates.checked
+      });
+    }
+
+    function loadSettings() {
+      const settings = loadJSON('settings', {});
+      if (settings.qrFrameSize) el.qrFrameSize.value = settings.qrFrameSize;
+      if (settings.cameraFacing) el.cameraFacing.value = settings.cameraFacing;
+      if (typeof settings.hostOnlyCandidates === 'boolean') {
+        el.hostOnlyCandidates.checked = settings.hostOnlyCandidates;
+      }
+      state.history = loadJSON('history', []);
+      renderHistory();
+    }
+
+    function setTab(name) {
+      el.tabs.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === name));
+      Object.entries(el.panels).forEach(([key, panel]) => panel.classList.toggle('active', key === name));
+    }
+
+    function updateActionButtons() {
+      const connected = !!state.dc && state.dc.readyState === 'open';
+      el.sendChatBtn.disabled = !connected;
+      el.sendFileBtn.disabled = !connected || !el.fileInput.files.length || state.isSendingFile;
+      el.createRoomBtn.disabled = state.isSendingFile;
+      el.joinRoomBtn.disabled = state.isSendingFile;
+      el.qrPrevBtn.disabled = state.outgoingFrames.length <= 1 || state.currentFrameIndex === 0;
+      el.qrNextBtn.disabled = state.outgoingFrames.length <= 1 || state.currentFrameIndex >= state.outgoingFrames.length - 1;
+      el.copyFrameBtn.disabled = !state.outgoingFrames.length;
+    }
+
+    function updateSelectedFileLabel() {
+      const file = el.fileInput.files[0];
+      el.selectedFileLabel.textContent = file ? `${file.name} - ${bytesToHuman(file.size)}` : 'لم يتم اختيار ملف';
+      updateActionButtons();
+    }
+
+    function setProgress(kind, current, total) {
+      const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+      if (kind === 'send') {
+        el.sendProgress.value = pct;
+        el.sendProgressLabel.textContent = `الإرسال: ${pct}% (${bytesToHuman(current)} / ${bytesToHuman(total)})`;
+      } else {
+        el.recvProgress.value = pct;
+        el.recvProgressLabel.textContent = `الاستقبال: ${pct}% (${bytesToHuman(current)} / ${bytesToHuman(total)})`;
+      }
+    }
+
+    function resetTransferProgress() {
+      setProgress('send', 0, 1);
+      setProgress('recv', 0, 1);
+    }
+
+    function makeManifest() {
+      const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6d5efc"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><rect width="256" height="256" rx="56" fill="url(#g)"/><text x="128" y="150" font-size="88" font-family="Arial" font-weight="700" fill="white" text-anchor="middle">LL</text></svg>`;
+      const manifest = {
+        name: 'LAN Link PWA',
+        short_name: 'LAN Link',
+        start_url: './index.html',
+        display: 'standalone',
+        background_color: '#0b1020',
+        theme_color: '#5b5bd6',
+        dir: 'rtl',
+        lang: 'ar',
+        icons: [
+          {
+            src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(iconSvg),
+            sizes: '256x256',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+    }
+
+    /**********************************************************************
+     * Service Worker + Offline warmup
+     **********************************************************************/
+    async function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) {
+        el.badgeSw.textContent = 'Service Worker: غير مدعوم';
+        el.badgeSw.className = 'badge err';
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js');
+        await navigator.serviceWorker.ready;
+        el.badgeSw.textContent = 'Service Worker: مفعل';
+        el.badgeSw.className = 'badge ok';
+        el.offlineStatus.textContent = 'تم تسجيل Service Worker. بعد تحميل الصفحة والمكتبات مرة واحدة بنجاح، سيعمل التطبيق أوفلاين من الكاش.';
+
+        if (reg.update) {
+          reg.update().catch(() => {});
+        }
+      } catch (error) {
+        el.badgeSw.textContent = 'Service Worker: فشل التسجيل';
+        el.badgeSw.className = 'badge err';
+        el.offlineStatus.textContent = 'فشل تسجيل Service Worker. تأكد من تشغيل التطبيق عبر HTTPS أو localhost وليس file://.';
+      }
+    }
+
+    async function warmCacheBestEffort() {
+      if (!('caches' in window)) return;
+      try {
+        const cache = await caches.open('lanlink-pwa-v1');
+        await cache.add('./').catch(() => {});
+        await cache.add('./index.html').catch(() => {});
+        await cache.add('./sw.js').catch(() => {});
+        await Promise.all([
+          cache.add('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js').catch(() => {}),
+          cache.add('https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js').catch(() => {})
+        ]);
+      } catch (_) {}
+    }
+
+    /**********************************************************************
+     * WebRTC
+     **********************************************************************/
+    function hostOnlyEnabled() {
+      return !!el.hostOnlyCandidates.checked;
+    }
+
+    function filterCandidate(candidate) {
+      if (!candidate || !candidate.candidate) return false;
+      if (!hostOnlyEnabled()) return true;
+      return / typ host /.test(candidate.candidate);
+    }
+
+    function createPeerConnection() {
+      cleanupPeerConnection(false);
+
+      state.localCandidates = [];
+      state.pc = new RTCPeerConnection({
+        iceServers: [],
+        bundlePolicy: 'max-bundle'
+      });
+
+      state.pc.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        if (filterCandidate(event.candidate)) {
+          state.localCandidates.push(event.candidate.toJSON());
+        }
+      };
+
+      state.pc.oniceconnectionstatechange = () => {
+        const s = state.pc.iceConnectionState;
+        if (s === 'connected' || s === 'completed') {
+          setConnectionPill('متصل', 'success');
+          logHistory('تم اكتمال اتصال ICE.');
+        } else if (s === 'failed' || s === 'disconnected') {
+          setConnectionPill(`ICE: ${s}`, 'error');
+        } else {
+          setConnectionPill(`ICE: ${s}`, 'warning');
+        }
+      };
+
+      state.pc.onconnectionstatechange = () => {
+        const s = state.pc.connectionState;
+        if (s === 'connected') {
+          setConnectionPill('القناة متصلة', 'success');
+          addSystemMessage('تم تأسيس اتصال مباشر بين الجهازين.');
+          logHistory('تم اتصال الطرفين عبر WebRTC.');
+        } else if (s === 'failed' || s === 'closed') {
+          setConnectionPill(`الحالة: ${s}`, s === 'failed' ? 'error' : 'warning');
+        } else {
+          setConnectionPill(`الحالة: ${s}`, 'warning');
+        }
+      };
+
+      state.pc.ondatachannel = (event) => {
+        setupDataChannel(event.channel);
+      };
+    }
+
+    function setupDataChannel(channel) {
+      state.dc = channel;
+      state.dc.binaryType = 'arraybuffer';
+      state.dc.bufferedAmountLowThreshold = LOW_WATER_MARK;
+
+      state.dc.onopen = () => {
+        setConnectionPill('القناة مفتوحة', 'success');
+        addSystemMessage('أصبحت قناة البيانات جاهزة للدردشة ونقل الملفات.');
+        logHistory('تم فتح قناة البيانات.');
+        updateActionButtons();
+      };
+
+      state.dc.onclose = () => {
+        setConnectionPill('القناة مغلقة', 'warning');
+        addSystemMessage('تم إغلاق قناة البيانات.');
+        updateActionButtons();
+      };
+
+      state.dc.onerror = () => {
+        setConnectionPill('خطأ في القناة', 'error');
+        logHistory('حدث خطأ في قناة البيانات.');
+      };
+
+      state.dc.onmessage = async (event) => {
+        if (typeof event.data === 'string') {
+          handleDataMessage(event.data);
+        } else {
+          handleBinaryChunk(event.data);
+        }
+      };
+
+      updateActionButtons();
+    }
+
+    function cleanupPeerConnection(clearMode = false) {
+      if (state.scanner) {
+        stopScanner().catch(() => {});
+      }
+
+      if (state.dc) {
+        try {
+          state.dc.onopen = null;
+          state.dc.onclose = null;
+          state.dc.onmessage = null;
+          state.dc.onerror = null;
+          state.dc.close();
+        } catch (_) {}
+      }
+
+      if (state.pc) {
+        try {
+          state.pc.onicecandidate = null;
+          state.pc.ondatachannel = null;
+          state.pc.close();
+        } catch (_) {}
+      }
+
+      state.pc = null;
+      state.dc = null;
+      state.localCandidates = [];
+      state.receiveFile = null;
+      state.isSendingFile = false;
+      state.incomingFrames.clear();
+      clearOutgoingFrames();
+      resetTransferProgress();
+      if (clearMode) state.mode = null;
+      setModeBadge();
+      setConnectionPill('غير متصل', 'warning');
+      updateActionButtons();
+    }
+
+    async function waitForIceGatheringComplete(timeoutMs = 2500) {
+      const pc = state.pc;
+      if (!pc) return;
+      if (pc.iceGatheringState === 'complete') return;
+
+      await new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          pc.removeEventListener('icegatheringstatechange', onChange);
+          resolve();
+        };
+        const onChange = () => {
+          if (pc.iceGatheringState === 'complete') finish();
+        };
+        pc.addEventListener('icegatheringstatechange', onChange);
+        setTimeout(finish, timeoutMs);
+      });
+    }
+
+    async function createRoom() {
+      state.mode = 'offerer';
+      setModeBadge();
+      createPeerConnection();
+
+      const channel = state.pc.createDataChannel('lanlink-data', { ordered: true });
+      setupDataChannel(channel);
+
+      const offer = await state.pc.createOffer();
+      await state.pc.setLocalDescription(offer);
+      addSystemMessage('تم إنشاء Offer. جارٍ جمع ICE وتجهيز QR...');
+      logHistory('تم إنشاء Offer جديد.');
+      await waitForIceGatheringComplete();
+      await publishSignalPacket('offer');
+    }
+
+    async function joinRoomPrepare() {
+      state.mode = 'answerer';
+      setModeBadge();
+      createPeerConnection();
+      clearOutgoingFrames();
+      addSystemMessage('وضع الانضمام جاهز. امسح QR الخاص بالـ Offer من الجهاز الأول.');
+      logHistory('تم تفعيل وضع الانضمام.');
+    }
+
+    async function publishSignalPacket(type) {
+      const packet = {
+        app: 'lanlink',
+        version: SIGNAL_VERSION,
+        type,
+        ts: Date.now(),
+        desc: state.pc?.localDescription ? {
+          type: state.pc.localDescription.type,
+          sdp: state.pc.localDescription.sdp
+        } : null,
+        candidates: state.localCandidates
+      };
+
+      state.outgoingPacketType = type;
+      createOutgoingFrames(packet, type);
+      renderCurrentQRFrame();
+      logHistory(`تم تجهيز حزمة QR من النوع: ${type}.`);
+    }
+
+    /**********************************************************************
+     * QR framing
+     **********************************************************************/
+    function createOutgoingFrames(packet, type) {
+      const frameSize = Math.max(250, Math.min(1200, Number(el.qrFrameSize.value) || 700));
+      const packetString = JSON.stringify(packet);
+      const packetId = uid(type);
+      const chunks = [];
+
+      for (let i = 0; i < packetString.length; i += frameSize) {
+        chunks.push(packetString.slice(i, i + frameSize));
+      }
+
+      state.outgoingFrames = chunks.map((payload, idx) => JSON.stringify({
+        app: 'lanlink-frame',
+        packetId,
+        kind: type,
+        idx,
+        total: chunks.length,
+        payload
+      }));
+      state.currentFrameIndex = 0;
+      updateActionButtons();
+    }
+
+    function clearOutgoingFrames() {
+      state.outgoingFrames = [];
+      state.currentFrameIndex = 0;
+      state.outgoingPacketType = null;
+      el.qrcode.innerHTML = '';
+      el.qrMeta.textContent = 'لا توجد بيانات QR حالياً.';
+      updateActionButtons();
+    }
+
+    function renderCurrentQRFrame() {
+      el.qrcode.innerHTML = '';
+      if (!state.outgoingFrames.length) {
+        el.qrMeta.textContent = 'لا توجد بيانات QR حالياً.';
+        updateActionButtons();
+        return;
+      }
+
+      const text = state.outgoingFrames[state.currentFrameIndex];
+      const frameNo = state.currentFrameIndex + 1;
+      const total = state.outgoingFrames.length;
+      el.qrMeta.textContent = `النوع: ${state.outgoingPacketType || '-'} | الإطار ${frameNo} من ${total}`;
+
+      if (typeof QRCode !== 'function') {
+        el.qrcode.innerHTML = '<div class="subtle">مكتبة توليد QR لم تُحمّل بعد.</div>';
+        return;
+      }
+
+      new QRCode(el.qrcode, {
+        text,
+        width: 280,
+        height: 280,
+        colorDark: '#111827',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      updateActionButtons();
+    }
+
+    function handleIncomingFrameString(raw) {
+      let frame;
+      try {
+        frame = JSON.parse(raw);
+      } catch {
+        return tryImportWholePacket(raw);
+      }
+
+      if (!frame || frame.app !== 'lanlink-frame') {
+        return tryImportWholePacket(raw);
+      }
+
+      const key = frame.packetId;
+      if (!state.incomingFrames.has(key)) {
+        state.incomingFrames.set(key, {
+          kind: frame.kind,
+          total: frame.total,
+          parts: new Array(frame.total).fill(null)
+        });
+      }
+
+      const packet = state.incomingFrames.get(key);
+      packet.parts[frame.idx] = frame.payload;
+      const receivedCount = packet.parts.filter(Boolean).length;
+      el.scanStatus.textContent = `تم التقاط ${receivedCount} من ${packet.total} إطار (${packet.kind}).`;
+
+      if (receivedCount === packet.total) {
+        const joined = packet.parts.join('');
+        state.incomingFrames.delete(key);
+        tryImportWholePacket(joined);
+      }
+    }
+
+    async function tryImportWholePacket(raw) {
+      let packet;
+      try {
+        packet = JSON.parse(raw);
+      } catch {
+        addSystemMessage('تعذر تفسير البيانات المستوردة كحزمة إشارة صحيحة.');
+        return;
+      }
+
+      if (!packet || packet.app !== 'lanlink' || !packet.desc) {
+        addSystemMessage('البيانات المستوردة ليست حزمة LAN Link صالحة.');
+        return;
+      }
+
+      await importSignalPacket(packet);
+    }
+
+    async function importSignalPacket(packet) {
+      if (!state.pc) createPeerConnection();
+
+      if (packet.type === 'offer') {
+        if (state.mode !== 'answerer') {
+          state.mode = 'answerer';
+          setModeBadge();
+        }
+
+        await state.pc.setRemoteDescription(new RTCSessionDescription(packet.desc));
+        for (const c of packet.candidates || []) {
+          try { await state.pc.addIceCandidate(c); } catch (_) {}
+        }
+        addSystemMessage('تم استيراد Offer. جارٍ إنشاء Answer...');
+        logHistory('تم استيراد Offer عبر QR.');
+
+        const answer = await state.pc.createAnswer();
+        await state.pc.setLocalDescription(answer);
+        await waitForIceGatheringComplete();
+        await publishSignalPacket('answer');
+        setTab('settings');
+        return;
+      }
+
+      if (packet.type === 'answer') {
+        if (state.mode !== 'offerer') {
+          addSystemMessage('تم استيراد Answer لكن هذا الجهاز ليس في وضع منشئ الغرفة.');
+        }
+        await state.pc.setRemoteDescription(new RTCSessionDescription(packet.desc));
+        for (const c of packet.candidates || []) {
+          try { await state.pc.addIceCandidate(c); } catch (_) {}
+        }
+        addSystemMessage('تم استيراد Answer. يُفترض اكتمال الاتصال خلال لحظات.');
+        logHistory('تم استيراد Answer عبر QR.');
+        return;
+      }
+
+      addSystemMessage(`نوع حزمة غير مدعوم: ${packet.type}`);
+    }
+
+    /**********************************************************************
+     * QR scanner
+     **********************************************************************/
+    async function startScanner() {
+      if (typeof Html5Qrcode !== 'function') {
+        el.scanStatus.textContent = 'مكتبة المسح لم تُحمّل بعد.';
+        return;
+      }
+
+      if (state.scanner) return;
+
+      state.scanner = new Html5Qrcode('qr-reader');
+      el.startScanBtn.disabled = true;
+      el.stopScanBtn.disabled = false;
+      el.scanStatus.textContent = 'جارٍ تشغيل الكاميرا...';
+
+      try {
+        await state.scanner.start(
+          { facingMode: el.cameraFacing.value },
+          { fps: 8, qrbox: 240, aspectRatio: 1.0 },
+          async (decodedText) => {
+            const now = Date.now();
+            if (decodedText === state.scanDebounce.text && now - state.scanDebounce.ts < 1200) return;
+            state.scanDebounce = { text: decodedText, ts: now };
+            handleIncomingFrameString(decodedText);
+          },
+          () => {}
+        );
+        el.scanStatus.textContent = 'الكاميرا تعمل. وجّهها إلى QR.';
+      } catch (error) {
+        el.scanStatus.textContent = 'تعذر تشغيل الكاميرا. تحقق من الصلاحيات أو من HTTPS/localhost.';
+        el.startScanBtn.disabled = false;
+        el.stopScanBtn.disabled = true;
+        try { await state.scanner.clear(); } catch (_) {}
+        state.scanner = null;
+      }
+    }
+
+    async function stopScanner() {
+      if (!state.scanner) return;
+      try {
+        await state.scanner.stop();
+      } catch (_) {}
+      try {
+        await state.scanner.clear();
+      } catch (_) {}
+      state.scanner = null;
+      el.scanStatus.textContent = 'تم إيقاف المسح.';
+      el.startScanBtn.disabled = false;
+      el.stopScanBtn.disabled = true;
+    }
+
+    /**********************************************************************
+     * بروتوكول الرسائل وقناة البيانات
+     **********************************************************************/
+    function sendJSON(payload) {
+      if (!state.dc || state.dc.readyState !== 'open') {
+        throw new Error('قناة البيانات غير جاهزة');
+      }
+      state.dc.send(JSON.stringify(payload));
+    }
+
+    function handleDataMessage(raw) {
+      let msg;
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return;
+      }
+
+      if (!msg || !msg.kind) return;
+
+      if (msg.kind === 'chat') {
+        addMessage('in', msg.text || '');
+        return;
+      }
+
+      if (msg.kind === 'file-meta') {
+        /*
+          يبدأ استقبال الملف برسالة وصفية metadata، قبل وصول أي chunks ثنائية.
+          هذا يسمح للمستقبل بتهيئة buffer وعدّاد التقدم دون قراءة الملف كاملاً مرة واحدة.
+        */
+        state.receiveFile = {
+          id: msg.id,
+          name: msg.name,
+          size: msg.size,
+          type: msg.mime || 'application/octet-stream',
+          received: 0,
+          chunks: []
+        };
+        setProgress('recv', 0, msg.size || 1);
+        addSystemMessage(`بدأ استقبال الملف: ${msg.name} (${bytesToHuman(msg.size)})`);
+        logHistory(`بدأ استقبال الملف: ${msg.name}`);
+        return;
+      }
+
+      if (msg.kind === 'file-end') {
+        finalizeReceivedFile();
+        return;
+      }
+    }
+
+    function handleBinaryChunk(buffer) {
+      /*
+        كل chunk يصل كباينري ArrayBuffer منفصل.
+        نقوم بتجميع الأجزاء في مصفوفة صغيرة من الـ Uint8Array ثم ننشئ Blob في النهاية فقط.
+        بهذه الطريقة نتجنب تحميل الملف كاملاً كنص أو JSON ونخفض ضغط الذاكرة.
+      */
+      if (!state.receiveFile) return;
+      const chunk = new Uint8Array(buffer);
+      state.receiveFile.chunks.push(chunk);
+      state.receiveFile.received += chunk.byteLength;
+      setProgress('recv', state.receiveFile.received, state.receiveFile.size || 1);
+
+      if (state.receiveFile.received >= state.receiveFile.size) {
+        finalizeReceivedFile();
+      }
+    }
+
+    function finalizeReceivedFile() {
+      if (!state.receiveFile) return;
+      const info = state.receiveFile;
+      const blob = new Blob(info.chunks, { type: info.type });
+      const url = URL.createObjectURL(blob);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'download-item';
+      wrapper.innerHTML = `تم استلام الملف <strong>${escapeHtml(info.name)}</strong> - ${escapeHtml(bytesToHuman(info.size))}<br><a href="${url}" download="${escapeHtml(info.name)}">تنزيل الملف</a>`;
+      el.receivedFiles.prepend(wrapper);
+
+      setProgress('recv', info.size, info.size || 1);
+      addSystemMessage(`اكتمل استقبال الملف: ${info.name}`);
+      logHistory(`اكتمل استقبال الملف: ${info.name}`);
+      state.receiveFile = null;
+    }
+
+    async function waitForBufferedAmountLow(channel) {
+      if (channel.bufferedAmount <= HIGH_WATER_MARK) return;
+      await new Promise((resolve) => {
+        const onLow = () => {
+          channel.removeEventListener('bufferedamountlow', onLow);
+          resolve();
+        };
+        channel.addEventListener('bufferedamountlow', onLow, { once: true });
+      });
+    }
+
+    async function sendFile(file) {
+      if (!state.dc || state.dc.readyState !== 'open') {
+        addSystemMessage('لا يمكن إرسال الملف لأن القناة غير متصلة.');
+        return;
+      }
+      if (state.isSendingFile) return;
+
+      state.isSendingFile = true;
+      updateActionButtons();
+      setProgress('send', 0, file.size || 1);
+
+      const fileId = uid('file');
+      sendJSON({
+        kind: 'file-meta',
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        mime: file.type || 'application/octet-stream',
+        chunkSize: CHUNK_SIZE
+      });
+
+      addSystemMessage(`بدأ إرسال الملف: ${file.name} (${bytesToHuman(file.size)})`);
+      logHistory(`بدأ إرسال الملف: ${file.name}`);
+
+      /*
+        منطق التقسيم:
+        - نقرأ جزءاً واحداً فقط من الملف في كل مرة عبر slice().arrayBuffer().
+        - نرسل chunk ثم نتحقق من bufferedAmount.
+        - إذا امتلأ buffer ننتظر حدث bufferedamountlow قبل متابعة الإرسال.
+        هذا يمنع إرسال الملف دفعة واحدة ويحافظ على استقرار المتصفح مع الملفات الكبيرة.
+      */
+      let offset = 0;
+      while (offset < file.size) {
+        const end = Math.min(offset + CHUNK_SIZE, file.size);
+        const chunkBuffer = await file.slice(offset, end).arrayBuffer();
+        state.dc.send(chunkBuffer);
+        offset = end;
+        setProgress('send', offset, file.size || 1);
+
+        if (state.dc.bufferedAmount > HIGH_WATER_MARK) {
+          await waitForBufferedAmountLow(state.dc);
+          await sleep(0);
+        }
+      }
+
+      sendJSON({ kind: 'file-end', id: fileId });
+      setProgress('send', file.size, file.size || 1);
+      addSystemMessage(`اكتمل إرسال الملف: ${file.name}`);
+      logHistory(`اكتمل إرسال الملف: ${file.name}`);
+      state.isSendingFile = false;
+      updateActionButtons();
+    }
+
+    /**********************************************************************
+     * حذف بيانات التطبيق
+     **********************************************************************/
+    async function clearAppData() {
+      try { localStorage.clear(); } catch (_) {}
+
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch (_) {}
+      }
+
+      if ('serviceWorker' in navigator) {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => {
+            try { r.active?.postMessage({ type: 'CLEAR_APP_CACHE' }); } catch (_) {}
+            return r.unregister();
+          }));
+        } catch (_) {}
+      }
+
+      cleanupPeerConnection(true);
+      state.history = [];
+      renderHistory();
+      clearOutgoingFrames();
+      el.receivedFiles.innerHTML = '';
+      el.manualSignalInput.value = '';
+      addSystemMessage('تم حذف بيانات التطبيق. يُفضّل إعادة تحميل الصفحة.');
+      logHistory('تم حذف بيانات التطبيق.');
+      el.badgeSw.textContent = 'Service Worker: تمت الإزالة';
+      el.badgeSw.className = 'badge warn';
+    }
+
+    /**********************************************************************
+     * الربط بالأحداث
+     **********************************************************************/
+    function bindEvents() {
+      el.tabs.forEach((btn) => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+
+      el.chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          el.sendChatBtn.click();
+        }
+      });
+
+      el.sendChatBtn.addEventListener('click', () => {
+        const text = el.chatInput.value.trim();
+        if (!text || !state.dc || state.dc.readyState !== 'open') return;
+        sendJSON({ kind: 'chat', text });
+        addMessage('out', text);
+        el.chatInput.value = '';
+      });
+
+      el.fileInput.addEventListener('change', updateSelectedFileLabel);
+      el.sendFileBtn.addEventListener('click', async () => {
+        const file = el.fileInput.files[0];
+        if (file) await sendFile(file);
+      });
+
+      el.createRoomBtn.addEventListener('click', async () => {
+        try {
+          await createRoom();
+          setTab('settings');
+        } catch (error) {
+          addSystemMessage('فشل إنشاء الغرفة.');
+        }
+      });
+
+      el.joinRoomBtn.addEventListener('click', async () => {
+        try {
+          await joinRoomPrepare();
+          setTab('settings');
+        } catch (error) {
+          addSystemMessage('فشل تهيئة وضع الانضمام.');
+        }
+      });
+
+      el.resetConnectionBtn.addEventListener('click', () => {
+        cleanupPeerConnection(true);
+        addSystemMessage('تمت إعادة ضبط الاتصال الحالي.');
+        logHistory('تمت إعادة ضبط الاتصال.');
+      });
+
+      el.qrPrevBtn.addEventListener('click', () => {
+        if (state.currentFrameIndex > 0) {
+          state.currentFrameIndex--;
+          renderCurrentQRFrame();
+        }
+      });
+
+      el.qrNextBtn.addEventListener('click', () => {
+        if (state.currentFrameIndex < state.outgoingFrames.length - 1) {
+          state.currentFrameIndex++;
+          renderCurrentQRFrame();
+        }
+      });
+
+      el.copyFrameBtn.addEventListener('click', async () => {
+        if (!state.outgoingFrames.length) return;
+        try {
+          await navigator.clipboard.writeText(state.outgoingFrames[state.currentFrameIndex]);
+          addSystemMessage('تم نسخ الإطار الحالي إلى الحافظة.');
+        } catch {
+          addSystemMessage('تعذر النسخ إلى الحافظة.');
+        }
+      });
+
+      el.startScanBtn.addEventListener('click', () => startScanner());
+      el.stopScanBtn.addEventListener('click', () => stopScanner());
+
+      el.importSignalBtn.addEventListener('click', async () => {
+        const text = el.manualSignalInput.value.trim();
+        if (!text) return;
+        await handleIncomingFrameString(text);
+      });
+      el.clearManualBtn.addEventListener('click', () => { el.manualSignalInput.value = ''; });
+
+      [el.qrFrameSize, el.cameraFacing, el.hostOnlyCandidates].forEach((node) => {
+        node.addEventListener('change', persistSettings);
+      });
+
+      el.clearAppDataBtn.addEventListener('click', async () => {
+        const ok = confirm('هل أنت متأكد من حذف بيانات التطبيق والـ cache والسجل؟');
+        if (ok) await clearAppData();
+      });
+
+      window.addEventListener('online', setOnlineBadge);
+      window.addEventListener('offline', setOnlineBadge);
+    }
+
+    /**********************************************************************
+     * التهيئة
+     **********************************************************************/
+    async function init() {
+      makeManifest();
+      loadSettings();
+      setOnlineBadge();
+      setModeBadge();
+      resetTransferProgress();
+      updateSelectedFileLabel();
+      bindEvents();
+      addSystemMessage('جاهز. استخدم تبويب الإعدادات لبدء الاتصال بين الجهازين.');
+      await warmCacheBestEffort();
+      await registerServiceWorker();
+      updateActionButtons();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
